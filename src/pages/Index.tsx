@@ -610,6 +610,8 @@ const Index = () => {
   const [inspectionType, setInspectionType] = useState<'preliminary' | 'periodic' | 'indepth'>('periodic');
   const [selectedInspectionEmployee, setSelectedInspectionEmployee] = useState<number | null>(null);
   const [isInspectionDialogOpen, setIsInspectionDialogOpen] = useState(false);
+  const [selectedDepartmentForCalc, setSelectedDepartmentForCalc] = useState<string>('all');
+  const [recommendations, setRecommendations] = useState<string>('Рекомендуется соблюдать здоровый образ жизни, регулярные физические нагрузки, сбалансированное питание.');
 
   const filteredEmployees = employees.filter(emp => {
     const matchesSearch = emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -1514,14 +1516,19 @@ const Index = () => {
             <div className="grid gap-6">
               <Card>
                 <CardHeader>
-                  <CardTitle>Медицинские калькуляторы</CardTitle>
-                  <CardDescription>Расчет индексов и рисков для здоровья</CardDescription>
+                  <CardTitle>Медицинские калькуляторы и шкалы оценки рисков</CardTitle>
+                  <CardDescription>Расчет индексов и оценка сердечно-сосудистых рисков</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <Tabs value={selectedCalculator} onValueChange={setSelectedCalculator}>
-                    <TabsList className="grid w-full grid-cols-2">
-                      <TabsTrigger value="findrisc">FINDRISC</TabsTrigger>
-                      <TabsTrigger value="bmi">ИМТ</TabsTrigger>
+                    <TabsList className="grid w-full grid-cols-4 lg:grid-cols-7 gap-1">
+                      <TabsTrigger value="findrisc" className="text-xs">FINDRISC</TabsTrigger>
+                      <TabsTrigger value="fogoros" className="text-xs">Fogoros</TabsTrigger>
+                      <TabsTrigger value="ryan" className="text-xs">Ryan</TabsTrigger>
+                      <TabsTrigger value="cha2ds2" className="text-xs">CHA₂DS₂</TabsTrigger>
+                      <TabsTrigger value="hasbled" className="text-xs">HAS-BLED</TabsTrigger>
+                      <TabsTrigger value="score" className="text-xs">SCORE</TabsTrigger>
+                      <TabsTrigger value="bmi" className="text-xs">ИМТ</TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="findrisc" className="space-y-4 mt-4">
@@ -1642,13 +1649,433 @@ const Index = () => {
                       )}
                     </TabsContent>
 
+                    <TabsContent value="fogoros" className="space-y-4 mt-4">
+                      <div className="bg-red-50 p-4 rounded-lg">
+                        <h4 className="font-semibold text-red-900 mb-2">Шкала R. Fogoros</h4>
+                        <p className="text-sm text-red-800">
+                          Оценка риска внезапной сердечной смерти
+                        </p>
+                      </div>
+
+                      <div className="flex justify-between items-center mb-4">
+                        <Label>Выбор сотрудника/отдела</Label>
+                        <div className="flex gap-2">
+                          <Select value={selectedDepartmentForCalc} onValueChange={setSelectedDepartmentForCalc}>
+                            <SelectTrigger className="w-[200px]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">Все отделы</SelectItem>
+                              {departments.map(dept => (
+                                <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      <Select value={selectedCalculatorEmployee?.toString() || ''} onValueChange={(value) => setSelectedCalculatorEmployee(parseInt(value))}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Выберите сотрудника" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {employees.filter(e => selectedDepartmentForCalc === 'all' || e.department === selectedDepartmentForCalc).map(emp => (
+                            <SelectItem key={emp.id} value={emp.id.toString()}>
+                              {emp.name} - {emp.position}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+
+                      {selectedCalculatorEmployee && (() => {
+                        const emp = employees.find(e => e.id === selectedCalculatorEmployee);
+                        return emp ? (
+                          <div className="space-y-4 border-t pt-4">
+                            <div className="bg-slate-50 p-3 rounded-lg text-sm">
+                              <strong>{emp.name}</strong> - {emp.age} лет, ИМТ: {emp.bmi}, АД: {emp.bloodPressure}
+                            </div>
+                            
+                            <div className="space-y-3">
+                              <div className="flex items-center justify-between p-3 bg-white border rounded">
+                                <span className="text-sm">Фракция выброса &lt;35%</span>
+                                <Select defaultValue="no">
+                                  <SelectTrigger className="w-[100px]">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="yes">Да (+3)</SelectItem>
+                                    <SelectItem value="no">Нет (0)</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              
+                              <div className="flex items-center justify-between p-3 bg-white border rounded">
+                                <span className="text-sm">Желудочковая тахикардия</span>
+                                <Select defaultValue="no">
+                                  <SelectTrigger className="w-[100px]">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="yes">Да (+2)</SelectItem>
+                                    <SelectItem value="no">Нет (0)</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              
+                              <div className="flex items-center justify-between p-3 bg-white border rounded">
+                                <span className="text-sm">Синкопальные состояния</span>
+                                <Select defaultValue="no">
+                                  <SelectTrigger className="w-[100px]">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="yes">Да (+1)</SelectItem>
+                                    <SelectItem value="no">Нет (0)</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+
+                            <Button className="w-full">Рассчитать риск</Button>
+
+                            <div className="bg-green-50 p-4 rounded-lg">
+                              <h5 className="font-semibold text-green-900 mb-2">Результат: Низкий риск</h5>
+                              <p className="text-sm text-green-800 mb-2">Сумма баллов: 0 — риск &lt;5% в год</p>
+                              <div className="mt-3 p-3 bg-white rounded border">
+                                <Label className="text-xs font-semibold mb-2 block">Рекомендации (редактируемые)</Label>
+                                <Textarea 
+                                  value={recommendations} 
+                                  onChange={(e) => setRecommendations(e.target.value)}
+                                  rows={3}
+                                  className="text-sm"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ) : null;
+                      })()}
+                    </TabsContent>
+
+                    <TabsContent value="ryan" className="space-y-4 mt-4">
+                      <div className="bg-purple-50 p-4 rounded-lg">
+                        <h4 className="font-semibold text-purple-900 mb-2">Шкала M. Ryan (модификация W. McKenna)</h4>
+                        <p className="text-sm text-purple-800">Оценка риска при желудочковой экстрасистолии</p>
+                      </div>
+
+                      <Select value={selectedCalculatorEmployee?.toString() || ''} onValueChange={(value) => setSelectedCalculatorEmployee(parseInt(value))}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Выберите сотрудника" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {employees.map(emp => (
+                            <SelectItem key={emp.id} value={emp.id.toString()}>
+                              {emp.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+
+                      {selectedCalculatorEmployee && (
+                        <div className="space-y-4 border-t pt-4">
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between p-3 bg-white border rounded">
+                              <span className="text-sm">Частота экстрасистол &gt;10/час</span>
+                              <Select>
+                                <SelectTrigger className="w-[100px]">
+                                  <SelectValue placeholder="Выбор" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="yes">Да (+2)</SelectItem>
+                                  <SelectItem value="no">Нет (0)</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                            
+                            <div className="flex items-center justify-between p-3 bg-white border rounded">
+                              <span className="text-sm">Полиморфные экстрасистолы</span>
+                              <Select>
+                                <SelectTrigger className="w-[100px]">
+                                  <SelectValue placeholder="Выбор" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="yes">Да (+1)</SelectItem>
+                                  <SelectItem value="no">Нет (0)</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+
+                          <Button className="w-full">Рассчитать</Button>
+
+                          <div className="bg-blue-50 p-4 rounded-lg">
+                            <h5 className="font-semibold text-blue-900 mb-2">Низкий риск</h5>
+                            <div className="mt-3 p-3 bg-white rounded border">
+                              <Label className="text-xs font-semibold mb-2 block">Рекомендации</Label>
+                              <Textarea 
+                                value={recommendations} 
+                                onChange={(e) => setRecommendations(e.target.value)}
+                                rows={3}
+                                className="text-sm"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </TabsContent>
+
+                    <TabsContent value="cha2ds2" className="space-y-4 mt-4">
+                      <div className="bg-orange-50 p-4 rounded-lg">
+                        <h4 className="font-semibold text-orange-900 mb-2">Шкала CHA₂DS₂-VASc</h4>
+                        <p className="text-sm text-orange-800">Риск тромбоэмболических осложнений при фибрилляции предсердий</p>
+                      </div>
+
+                      <Select value={selectedCalculatorEmployee?.toString() || ''} onValueChange={(value) => setSelectedCalculatorEmployee(parseInt(value))}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Выберите сотрудника" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {employees.map(emp => (
+                            <SelectItem key={emp.id} value={emp.id.toString()}>
+                              {emp.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+
+                      {selectedCalculatorEmployee && (
+                        <div className="space-y-4 border-t pt-4">
+                          <div className="space-y-2">
+                            {[
+                              'Сердечная недостаточность (+1)',
+                              'Гипертония (+1)',
+                              'Возраст ≥75 лет (+2)',
+                              'Диабет (+1)',
+                              'Инсульт/ТИА (+2)',
+                              'Сосудистые заболевания (+1)',
+                              'Возраст 65-74 (+1)',
+                              'Женский пол (+1)'
+                            ].map((item, idx) => (
+                              <div key={idx} className="flex items-center justify-between p-2 bg-white border rounded text-sm">
+                                <span>{item}</span>
+                                <input type="checkbox" className="w-5 h-5" />
+                              </div>
+                            ))}
+                          </div>
+
+                          <Button className="w-full">Рассчитать риск</Button>
+
+                          <div className="bg-green-50 p-4 rounded-lg">
+                            <h5 className="font-semibold text-green-900 mb-2">Низкий риск (0 баллов)</h5>
+                            <p className="text-sm text-green-800 mb-2">Риск инсульта: 0% в год</p>
+                            <div className="mt-3 p-3 bg-white rounded border">
+                              <Label className="text-xs font-semibold mb-2 block">Рекомендации</Label>
+                              <Textarea 
+                                value="Антикоагулянтная терапия не требуется. Контроль факторов риска." 
+                                onChange={(e) => setRecommendations(e.target.value)}
+                                rows={3}
+                                className="text-sm"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </TabsContent>
+
+                    <TabsContent value="hasbled" className="space-y-4 mt-4">
+                      <div className="bg-red-50 p-4 rounded-lg">
+                        <h4 className="font-semibold text-red-900 mb-2">Шкала HAS-BLED</h4>
+                        <p className="text-sm text-red-800">Риск кровотечений при фибрилляции предсердий</p>
+                      </div>
+
+                      <Select value={selectedCalculatorEmployee?.toString() || ''} onValueChange={(value) => setSelectedCalculatorEmployee(parseInt(value))}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Выберите сотрудника" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {employees.map(emp => (
+                            <SelectItem key={emp.id} value={emp.id.toString()}>
+                              {emp.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+
+                      {selectedCalculatorEmployee && (
+                        <div className="space-y-4 border-t pt-4">
+                          <div className="space-y-2">
+                            {[
+                              'Гипертония (+1)',
+                              'Нарушение функции почек/печени (+1 или +2)',
+                              'Инсульт (+1)',
+                              'Кровотечения в анамнезе (+1)',
+                              'Лабильное МНО (+1)',
+                              'Возраст >65 лет (+1)',
+                              'Препараты/алкоголь (+1 или +2)'
+                            ].map((item, idx) => (
+                              <div key={idx} className="flex items-center justify-between p-2 bg-white border rounded text-sm">
+                                <span>{item}</span>
+                                <input type="checkbox" className="w-5 h-5" />
+                              </div>
+                            ))}
+                          </div>
+
+                          <Button className="w-full">Рассчитать риск</Button>
+
+                          <div className="bg-green-50 p-4 rounded-lg">
+                            <h5 className="font-semibold text-green-900 mb-2">Низкий риск (0-2 балла)</h5>
+                            <p className="text-sm text-green-800 mb-2">Риск больших кровотечений &lt;2% в год</p>
+                            <div className="mt-3 p-3 bg-white rounded border">
+                              <Label className="text-xs font-semibold mb-2 block">Рекомендации</Label>
+                              <Textarea 
+                                value="Антикоагулянтная терапия безопасна. Контроль МНО." 
+                                onChange={(e) => setRecommendations(e.target.value)}
+                                rows={3}
+                                className="text-sm"
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </TabsContent>
+
+                    <TabsContent value="score" className="space-y-4 mt-4">
+                      <div className="bg-indigo-50 p-4 rounded-lg">
+                        <h4 className="font-semibold text-indigo-900 mb-2">Шкала SCORE / SCORE-2</h4>
+                        <p className="text-sm text-indigo-800">Оценка 10-летнего риска фатальных сердечно-сосудистых событий</p>
+                      </div>
+
+                      <div className="flex gap-2 mb-4">
+                        <Select value={selectedDepartmentForCalc} onValueChange={setSelectedDepartmentForCalc}>
+                          <SelectTrigger className="flex-1">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Все отделы</SelectItem>
+                            {departments.map(dept => (
+                              <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <Button variant="outline">
+                          <Icon name="Users" size={16} className="mr-2" />
+                          Расчет по отделу
+                        </Button>
+                      </div>
+
+                      <Select value={selectedCalculatorEmployee?.toString() || ''} onValueChange={(value) => setSelectedCalculatorEmployee(parseInt(value))}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Выберите сотрудника" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {employees.filter(e => selectedDepartmentForCalc === 'all' || e.department === selectedDepartmentForCalc).map(emp => (
+                            <SelectItem key={emp.id} value={emp.id.toString()}>
+                              {emp.name} - {emp.age} лет
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+
+                      {selectedCalculatorEmployee && (() => {
+                        const emp = employees.find(e => e.id === selectedCalculatorEmployee);
+                        return emp ? (
+                          <div className="space-y-4 border-t pt-4">
+                            <div className="bg-blue-50 p-3 rounded-lg">
+                              <h5 className="font-semibold mb-2">Данные пациента</h5>
+                              <div className="grid grid-cols-2 gap-2 text-sm">
+                                <p><strong>Возраст:</strong> {emp.age} лет</p>
+                                <p><strong>Пол:</strong> Мужской</p>
+                                <p><strong>АД:</strong> {emp.bloodPressure}</p>
+                                <p><strong>Холестерин:</strong> {emp.cholesterol} ммоль/л</p>
+                              </div>
+                            </div>
+
+                            <div className="space-y-3">
+                              <div className="space-y-2">
+                                <Label>Курение</Label>
+                                <Select>
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Выберите" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="no">Не курит</SelectItem>
+                                    <SelectItem value="yes">Курит</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+
+                              <div className="space-y-2">
+                                <Label>Общий холестерин (ммоль/л)</Label>
+                                <Input type="number" defaultValue={emp.cholesterol} step="0.1" />
+                              </div>
+
+                              <div className="space-y-2">
+                                <Label>Систолическое АД (мм рт.ст.)</Label>
+                                <Input type="number" defaultValue={emp.bloodPressure?.split('/')[0]} />
+                              </div>
+                            </div>
+
+                            <Button className="w-full">Рассчитать SCORE</Button>
+
+                            <div className="bg-yellow-50 p-4 rounded-lg">
+                              <h5 className="font-semibold text-yellow-900 mb-2">Умеренный риск (1-5%)</h5>
+                              <p className="text-sm text-yellow-800 mb-3">10-летний риск фатальных ССЗ: 3%</p>
+                              <div className="mt-3 p-3 bg-white rounded border">
+                                <Label className="text-xs font-semibold mb-2 block">Рекомендации для сотрудника</Label>
+                                <Textarea 
+                                  value="Рекомендуется: отказ от курения, контроль АД, снижение холестерина диетой, регулярная физическая активность 150 мин/неделю, контроль веса." 
+                                  onChange={(e) => setRecommendations(e.target.value)}
+                                  rows={4}
+                                  className="text-sm"
+                                />
+                                <Button size="sm" className="mt-2 w-full" variant="outline">
+                                  <Icon name="Save" size={14} className="mr-2" />
+                                  Сохранить рекомендации
+                                </Button>
+                              </div>
+                            </div>
+
+                            {selectedDepartmentForCalc !== 'all' && (
+                              <div className="bg-slate-50 p-4 rounded-lg">
+                                <h5 className="font-semibold mb-3">Статистика по отделу: {selectedDepartmentForCalc}</h5>
+                                <div className="space-y-2 text-sm">
+                                  <div className="flex justify-between">
+                                    <span>Низкий риск (&lt;1%)</span>
+                                    <span className="font-semibold text-green-600">45%</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span>Умеренный риск (1-5%)</span>
+                                    <span className="font-semibold text-yellow-600">40%</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span>Высокий риск (&gt;5%)</span>
+                                    <span className="font-semibold text-red-600">15%</span>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        ) : null;
+                      })()}
+                    </TabsContent>
+
                     <TabsContent value="bmi" className="space-y-4 mt-4">
                       <div className="bg-blue-50 p-4 rounded-lg">
                         <h4 className="font-semibold text-blue-900 mb-2">Калькулятор ИМТ</h4>
-                        <p className="text-sm text-blue-800">
-                          Индекс массы тела (ИМТ) = вес (кг) / рост² (м)
-                        </p>
+                        <p className="text-sm text-blue-800">Индекс массы тела (ИМТ) = вес (кг) / рост² (м)</p>
                       </div>
+
+                      <Select value={selectedCalculatorEmployee?.toString() || ''} onValueChange={(value) => setSelectedCalculatorEmployee(parseInt(value))}>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Выберите сотрудника или введите вручную" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {employees.map(emp => (
+                            <SelectItem key={emp.id} value={emp.id.toString()}>
+                              {emp.name} - ИМТ: {emp.bmi || 'Н/Д'}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
 
                       <div className="grid grid-cols-2 gap-4">
                         <div className="space-y-2">
@@ -1664,10 +2091,10 @@ const Index = () => {
                       <Button className="w-full">Рассчитать ИМТ</Button>
 
                       <div className="space-y-3 pt-4 border-t">
-                        <h4 className="font-semibold">Интерпретация результатов:</h4>
+                        <h4 className="font-semibold">Интерпретация:</h4>
                         <div className="space-y-2 text-sm">
                           <div className="flex justify-between p-2 bg-blue-50 rounded">
-                            <span>Менее 18.5</span>
+                            <span>&lt;18.5</span>
                             <span className="font-medium">Недостаточная масса</span>
                           </div>
                           <div className="flex justify-between p-2 bg-green-50 rounded">
@@ -1683,7 +2110,7 @@ const Index = () => {
                             <span className="font-medium">Ожирение I степени</span>
                           </div>
                           <div className="flex justify-between p-2 bg-red-50 rounded">
-                            <span>35.0+</span>
+                            <span>≥35.0</span>
                             <span className="font-medium">Ожирение II-III степени</span>
                           </div>
                         </div>
